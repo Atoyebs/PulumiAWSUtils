@@ -1,0 +1,14 @@
+{
+    "name": "pulumi-aws-utils",
+    "main": "index.ts",
+    "devDependencies": {
+        "@types/node": "^16"
+    },
+    "dependencies": {
+        "@pulumi/aws": "^5.0.0",
+        "@pulumi/awsx": "^1.0.0",
+        "@pulumi/pulumi": "^3.0.0",
+        "lodash": "^4.17.21",
+        "moment": "^2.29.4"
+    }
+}
