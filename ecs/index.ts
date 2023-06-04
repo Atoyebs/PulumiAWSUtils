@@ -19,13 +19,17 @@ export class ECSFargateCluster {
   applicationLoadBalancer: awsx.lb.ApplicationLoadBalancer;
   combinedResources: CombinedResourcesMap;
   combinedResourcesArray: CombinedFargateResource[];
+  stage: string;
 
   constructor(props: {
     resourceNamingPrefix: string;
     certificateDomain: string | pulumi.Input<string>;
     clusterName: string;
     combinedResources: CombinedFargateResource[];
+    stage?: string;
   }) {
+    const stage = getCorrectStage(props?.stage);
+    this.stage = stage;
     // Get an existing domain Certificate
     this.certificate = aws.acm.getCertificateOutput({
       domain: props.certificateDomain,
@@ -34,11 +38,11 @@ export class ECSFargateCluster {
 
     this.combinedResourcesArray = props.combinedResources;
 
-    const vpc = new awsx.ec2.DefaultVpc(`${props.resourceNamingPrefix}-vpc`);
+    const vpc = new awsx.ec2.DefaultVpc(`${props.resourceNamingPrefix}-${stage}-vpc`);
 
     // Create an application load balancer with SSL support.
     this.applicationLoadBalancer = new awsx.lb.ApplicationLoadBalancer(
-      `${props.resourceNamingPrefix}-lb`,
+      `${props.resourceNamingPrefix}-${stage}-lb`,
       {}
     );
 
@@ -47,14 +51,14 @@ export class ECSFargateCluster {
     let combinedResources: CombinedResourcesMap = {};
 
     const httpsListener = ECSFargateCluster.setupHttpsListener(
-      `https-listener`,
+      `https-listener-${stage}`,
       loadBalancerArn,
       this.certificate.arn
     );
 
     //store all target groups in a map for easy access via its name
     props.combinedResources.forEach(({ name, port }) => {
-      const containerTargetGroup = new aws.lb.TargetGroup(`${name}-tg`, {
+      const containerTargetGroup = new aws.lb.TargetGroup(`${name}-${stage}-tg`, {
         port,
         protocol: "HTTP",
         targetType: "ip",
@@ -64,9 +68,9 @@ export class ECSFargateCluster {
       combinedResources[name] = {
         targetGroup: containerTargetGroup,
         internalPort: port,
-        listenerRule: new aws.lb.ListenerRule(`${name}-rule`, {
+        listenerRule: new aws.lb.ListenerRule(`${name}-${stage}-rule`, {
           actions: [{ type: "forward", targetGroupArn: containerTargetGroup.arn }],
-          conditions: [{ hostHeader: { values: [`${name}.${props.certificateDomain}`] } }],
+          conditions: [{ hostHeader: { values: [`${name}-${stage}.${props.certificateDomain}`] } }],
           listenerArn: httpsListener.arn,
         }),
       };
@@ -143,6 +147,14 @@ export class ECSFargateCluster {
     );
   }
 
+  /**
+   * Adds a service to the already configured to manage the spinning up and
+   * lifecycle of the defined task. This service will be added to the cluster that was
+   * created at the instantiation of the ECSFargateCluster class. This function should only be used
+   * with a particular ECSFargate instance
+   *
+   * @returns {awsx.ecs.FargateService} An ECS Fargate service object
+   */
   addServiceToCluster(props: {
     name: string;
     image: string;
@@ -176,7 +188,7 @@ export class ECSFargateCluster {
       ],
     };
 
-    const fargateService = new awsx.ecs.FargateService(`service-${props.name}`, {
+    const fargateService = new awsx.ecs.FargateService(`service-${props.name}-${this.stage}`, {
       cluster: this.cluster.arn,
       desiredCount,
       continueBeforeSteadyState: true,
@@ -198,30 +210,87 @@ export class ECSFargateCluster {
     fargateResourceArray: CombinedFargateResource[],
     loadBalancer: awsx.lb.ApplicationLoadBalancer,
     hostedZoneId: string,
-    baseDomain: string
-  ) {
-    fargateResourceArray.forEach(({ name }) => {
-      new aws.route53.Record(`${name}-subdomain`, {
-        name: `${name}.${baseDomain}`,
-        type: "A",
-        aliases: [
-          {
-            name: loadBalancer.loadBalancer.dnsName,
-            zoneId: loadBalancer.loadBalancer.zoneId,
-            evaluateTargetHealth: true,
-          },
-        ],
-        zoneId: hostedZoneId,
-      });
+    baseDomain: string,
+    stage?: string
+  ): { [key: string]: string } {
+    const aStage = getCorrectStage(stage);
+
+    let urls = {};
+
+    fargateResourceArray.forEach((fargateResource) => {
+      const { name } = fargateResource;
+
+      const domain = ECSFargateCluster.createRoute53SubdomainRecord(
+        fargateResource,
+        loadBalancer,
+        hostedZoneId,
+        baseDomain,
+        aStage
+      );
+
+      urls[name] = domain;
     });
+
+    return urls;
   }
 
-  createRoute53SubdomainRecords(hostedZoneId: string, baseDomain: string) {
-    ECSFargateCluster.createRoute53SubdomainRecords(
+  static createRoute53SubdomainRecord(
+    fargateResource: CombinedFargateResource,
+    loadBalancer: awsx.lb.ApplicationLoadBalancer,
+    hostedZoneId: string,
+    baseDomain: string,
+    stage?: string
+  ): string {
+    const { name } = fargateResource;
+    const aStage = getCorrectStage(stage);
+    const domainUrl = getServiceDomainUrl(name, baseDomain, aStage);
+
+    new aws.route53.Record(`${name}-${aStage}-subdomain`, {
+      name: domainUrl,
+      type: "A",
+      aliases: [
+        {
+          name: loadBalancer.loadBalancer.dnsName,
+          zoneId: loadBalancer.loadBalancer.zoneId,
+          evaluateTargetHealth: true,
+        },
+      ],
+      zoneId: hostedZoneId,
+    });
+
+    return domainUrl;
+  }
+
+  createRoute53SubdomainRecords(hostedZoneId: string, baseDomain: string, stage?: string) {
+    const result = ECSFargateCluster.createRoute53SubdomainRecords(
       this.combinedResourcesArray,
       this.applicationLoadBalancer,
       hostedZoneId,
-      baseDomain
+      baseDomain,
+      stage
     );
+
+    return result;
   }
+}
+
+//========================================== HELPER FUNCTIONS ======================================
+
+function getCorrectStage(stage?: string): string {
+  return stage ?? "dev";
+}
+
+function getIsStageProduction(stage?: string): boolean {
+  const lowercaseStage = getCorrectStage(stage).toLowerCase();
+  const isProduction = lowercaseStage.includes("prod") || lowercaseStage.includes("live");
+  return isProduction;
+}
+
+function getServiceDomainUrl(serviceName: string, baseDomain: string, stage?: string): string {
+  const isProduction = getIsStageProduction(stage);
+  const aStage = getCorrectStage(stage);
+  const url = isProduction
+    ? `${serviceName}.${baseDomain}`
+    : `${serviceName}-${aStage}.${baseDomain}`;
+  return url;
 }
