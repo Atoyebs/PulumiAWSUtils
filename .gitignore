@@ -2,8 +2,8 @@
 node_modules
 package.lock.json
 yarn.lock
-dist/
-build/
+# dist/
+# build/
 *.log
 *.zip
 .env

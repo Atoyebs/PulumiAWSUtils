@@ -1,14 +1,20 @@
 {
     "name": "pulumi-aws-utils",
     "main": "index.ts",
+    "scripts": {
+        "build": "babel ecs --extensions \".ts,.tsx\" -d dist"
+    },
     "devDependencies": {
+        "@babel/cli": "^7.21.5",
+        "@babel/core": "^7.22.1",
+        "@babel/preset-env": "^7.22.4",
+        "@babel/preset-react": "^7.22.3",
+        "@babel/preset-typescript": "^7.21.5",
         "@types/node": "^16"
     },
     "dependencies": {
         "@pulumi/aws": "^5.0.0",
         "@pulumi/awsx": "^1.0.0",
-        "@pulumi/pulumi": "^3.0.0",
-        "lodash": "^4.17.21",
-        "moment": "^2.29.4"
+        "@pulumi/pulumi": "^3.0.0"
     }
 }
