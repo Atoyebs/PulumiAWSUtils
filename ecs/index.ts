@@ -215,7 +215,7 @@ export class ECSFargateCluster {
   ): { [key: string]: string } {
     const aStage = getCorrectStage(stage);
 
-    let urls = {};
+    let urls: { [key: string]: string } = {};
 
     fargateResourceArray.forEach((fargateResource) => {
       const { name } = fargateResource;

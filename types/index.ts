@@ -1,4 +1,5 @@
 import * as pulumi from "@pulumi/pulumi";
+import * as awsx from "@pulumi/awsx";
 
 export interface TargetGroupInput {
   name: string;
