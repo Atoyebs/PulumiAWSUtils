@@ -1,7 +1,6 @@
 {
     "name": "pulumi-aws-utils",
-    "main": "index.ts",
-    "type": "module",
+    "main": "dist/index.js",
     "scripts": {
         "build": "babel . -d dist"
     },
@@ -19,5 +18,6 @@
         "@pulumi/aws": "^5.0.0",
         "@pulumi/awsx": "^1.0.0",
         "@pulumi/pulumi": "^3.0.0"
-    }
+    },
+    "files": ["dist"]
 }
