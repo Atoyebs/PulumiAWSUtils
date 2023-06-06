@@ -1,6 +1,32 @@
-import * as aws from "@pulumi/aws";
-import * as awsx from "@pulumi/awsx";
-import { PORTS } from "../types";
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ECSFargateCluster = void 0;
+var aws = __importStar(require("@pulumi/aws"));
+var awsx = __importStar(require("@pulumi/awsx"));
+var types_1 = require("../types");
 var ECSFargateCluster = /** @class */ (function () {
     function ECSFargateCluster(props) {
         var stage = getCorrectStage(props === null || props === void 0 ? void 0 : props.stage);
@@ -67,7 +93,7 @@ var ECSFargateCluster = /** @class */ (function () {
     ECSFargateCluster.setupHttpsListener = function (listenerName, loadBalancerArn, certificateArn) {
         return new aws.lb.Listener(listenerName, {
             loadBalancerArn: loadBalancerArn,
-            port: PORTS.SSH,
+            port: types_1.PORTS.SSH,
             protocol: "HTTPS",
             certificateArn: certificateArn,
             defaultActions: [
@@ -171,7 +197,7 @@ var ECSFargateCluster = /** @class */ (function () {
     };
     return ECSFargateCluster;
 }());
-export { ECSFargateCluster };
+exports.ECSFargateCluster = ECSFargateCluster;
 //========================================== HELPER FUNCTIONS ======================================
 function getCorrectStage(stage) {
     return stage !== null && stage !== void 0 ? stage : "dev";
