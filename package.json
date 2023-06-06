@@ -1,8 +1,9 @@
 {
     "name": "pulumi-aws-utils",
     "main": "index.ts",
+    "type": "module",
     "scripts": {
-        "build": "babel ecs --extensions \".ts,.tsx\" -d dist"
+        "build": "babel . -d dist"
     },
     "devDependencies": {
         "@babel/cli": "^7.21.5",
