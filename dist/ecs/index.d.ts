@@ -1,7 +1,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
-import { CombinedFargateResource } from "../types";
+import { CombinedFargateResource, PORTS } from "../typedefs";
 interface CombinedResourceItem {
     targetGroup?: aws.lb.TargetGroup;
     listenerRule?: aws.lb.ListenerRule;
@@ -10,6 +10,7 @@ interface CombinedResourceItem {
 interface CombinedResourcesMap {
     [key: string]: CombinedResourceItem;
 }
+export { CombinedFargateResource, PORTS };
 export declare class ECSFargateCluster {
     certificate: pulumi.Output<aws.acm.GetCertificateResult>;
     cluster: aws.ecs.Cluster;
@@ -76,4 +77,3 @@ export declare class ECSFargateCluster {
         [key: string]: string;
     };
 }
-export {};

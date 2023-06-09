@@ -13,6 +13,8 @@ interface CombinedResourcesMap {
   [key: string]: CombinedResourceItem;
 }
 
+export { CombinedFargateResource, PORTS };
+
 export class ECSFargateCluster {
   certificate: pulumi.Output<aws.acm.GetCertificateResult>;
   cluster: aws.ecs.Cluster;

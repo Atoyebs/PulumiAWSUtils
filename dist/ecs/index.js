@@ -23,10 +23,11 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ECSFargateCluster = void 0;
+exports.ECSFargateCluster = exports.PORTS = void 0;
 var aws = __importStar(require("@pulumi/aws"));
 var awsx = __importStar(require("@pulumi/awsx"));
-var types_1 = require("../types");
+var typedefs_1 = require("../typedefs");
+Object.defineProperty(exports, "PORTS", { enumerable: true, get: function () { return typedefs_1.PORTS; } });
 var ECSFargateCluster = /** @class */ (function () {
     function ECSFargateCluster(props) {
         var stage = getCorrectStage(props === null || props === void 0 ? void 0 : props.stage);
@@ -93,7 +94,7 @@ var ECSFargateCluster = /** @class */ (function () {
     ECSFargateCluster.setupHttpsListener = function (listenerName, loadBalancerArn, certificateArn) {
         return new aws.lb.Listener(listenerName, {
             loadBalancerArn: loadBalancerArn,
-            port: types_1.PORTS.SSH,
+            port: typedefs_1.PORTS.SSH,
             protocol: "HTTPS",
             certificateArn: certificateArn,
             defaultActions: [

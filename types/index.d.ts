@@ -1,2 +1,2 @@
 export * from "../typedefs/ecs";
-export * from "../typedefs";
+export * from "../typedefs/index";
