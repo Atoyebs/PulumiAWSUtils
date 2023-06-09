@@ -30,6 +30,7 @@ var ecs_1 = require("../typedefs/ecs");
 Object.defineProperty(exports, "PORTS", { enumerable: true, get: function () { return ecs_1.PORTS; } });
 var ECSFargateCluster = /** @class */ (function () {
     function ECSFargateCluster(props) {
+        var _this = this;
         var stage = getCorrectStage(props === null || props === void 0 ? void 0 : props.stage);
         this.stage = stage;
         // Get an existing domain Certificate
@@ -39,11 +40,12 @@ var ECSFargateCluster = /** @class */ (function () {
         });
         this.combinedResourcesArray = props.combinedResources;
         var vpc = new awsx.ec2.DefaultVpc("".concat(props.resourceNamingPrefix, "-").concat(stage, "-vpc"));
+        // An ECS cluster to deploy into
+        this.cluster = new aws.ecs.Cluster(props.clusterName, {}, { dependsOn: [vpc] });
         // Create an application load balancer with SSL support.
         this.applicationLoadBalancer = new awsx.lb.ApplicationLoadBalancer("".concat(props.resourceNamingPrefix, "-").concat(stage, "-lb"), {});
-        var loadBalancerArn = this.applicationLoadBalancer.loadBalancer.arn;
         var combinedResources = {};
-        var httpsListener = ECSFargateCluster.setupHttpsListener("https-listener-".concat(stage), loadBalancerArn, this.certificate.arn);
+        var httpsListener = ECSFargateCluster.setupHttpsListener("https-listener-".concat(stage), this.applicationLoadBalancer, this.certificate.arn);
         //store all target groups in a map for easy access via its name
         props.combinedResources.forEach(function (_a) {
             var name = _a.name, port = _a.port;
@@ -52,20 +54,20 @@ var ECSFargateCluster = /** @class */ (function () {
                 protocol: "HTTP",
                 targetType: "ip",
                 vpcId: vpc.vpcId,
-            });
+            }, { dependsOn: [httpsListener, _this.applicationLoadBalancer, _this.cluster] });
             combinedResources[name] = {
                 targetGroup: containerTargetGroup,
                 internalPort: port,
                 listenerRule: new aws.lb.ListenerRule("".concat(name, "-").concat(stage, "-rule"), {
                     actions: [{ type: "forward", targetGroupArn: containerTargetGroup.arn }],
-                    conditions: [{ hostHeader: { values: ["".concat(name, "-").concat(stage, ".").concat(props.certificateDomain)] } }],
+                    conditions: [
+                        { hostHeader: { values: ["".concat(name, "-").concat(stage, ".").concat(props.certificateDomain)] } },
+                    ],
                     listenerArn: httpsListener.arn,
-                }),
+                }, { dependsOn: [httpsListener, containerTargetGroup, _this.cluster] }),
             };
         });
         this.combinedResources = combinedResources;
-        // An ECS cluster to deploy into
-        this.cluster = new aws.ecs.Cluster(props.clusterName, {}, { dependsOn: [vpc] });
     }
     /**
      *  A static function to retrieve a certificate from ACM (Amazon Certificate Manager) based on its associated domain name
@@ -91,9 +93,9 @@ var ECSFargateCluster = /** @class */ (function () {
      * @param {string} certificateArn - The ARN of the SSL/TLS certificate.
      * @returns {aws.lb.Listener} An aws listener
      */
-    ECSFargateCluster.setupHttpsListener = function (listenerName, loadBalancerArn, certificateArn) {
+    ECSFargateCluster.setupHttpsListener = function (listenerName, loadBalancer, certificateArn) {
         return new aws.lb.Listener(listenerName, {
-            loadBalancerArn: loadBalancerArn,
+            loadBalancerArn: loadBalancer.loadBalancer.arn,
             port: ecs_1.PORTS.SSH,
             protocol: "HTTPS",
             certificateArn: certificateArn,
@@ -107,7 +109,7 @@ var ECSFargateCluster = /** @class */ (function () {
                     },
                 },
             ],
-        });
+        }, { dependsOn: [loadBalancer] });
     };
     /**
      * An instance version of the static function (setupHttpsListener)
@@ -118,7 +120,7 @@ var ECSFargateCluster = /** @class */ (function () {
      * @returns {aws.lb.Listener} An aws listener
      */
     ECSFargateCluster.prototype.setupHttpsListener = function (listenerName) {
-        return ECSFargateCluster.setupHttpsListener(listenerName, this.applicationLoadBalancer.loadBalancer.arn, this.certificate.arn);
+        return ECSFargateCluster.setupHttpsListener(listenerName, this.applicationLoadBalancer, this.certificate.arn);
     };
     /**
      * Adds a service to the already configured to manage the spinning up and

@@ -42,7 +42,7 @@ export declare class ECSFargateCluster {
      * @param {string} certificateArn - The ARN of the SSL/TLS certificate.
      * @returns {aws.lb.Listener} An aws listener
      */
-    static setupHttpsListener(listenerName: string, loadBalancerArn: string | pulumi.Input<string>, certificateArn: string | pulumi.Input<string>): aws.lb.Listener;
+    static setupHttpsListener(listenerName: string, loadBalancer: awsx.lb.ApplicationLoadBalancer, certificateArn: string | pulumi.Input<string>): aws.lb.Listener;
     /**
      * An instance version of the static function (setupHttpsListener)
      * This will setup an HTTPS listener for your ECS or Fargate Load Balancer using the certificate and load balancer set up for this instance.
