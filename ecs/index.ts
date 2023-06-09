@@ -1,7 +1,7 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
-import { CombinedFargateResource, PORTS } from "../typedefs";
+import { CombinedFargateResource, PORTS } from "../typedefs/ecs";
 
 interface CombinedResourceItem {
   targetGroup?: aws.lb.TargetGroup;

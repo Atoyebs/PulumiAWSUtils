@@ -1,8 +1,6 @@
 import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 import * as awsx from "@pulumi/awsx";
-import { CombinedFargateResource } from ".";
-
 
 interface CombinedResourceItem {
   targetGroup?: aws.lb.TargetGroup;
@@ -98,3 +96,26 @@ export declare class ECSFargateCluster {
     [key: string]: string;
   };
 }
+
+export interface TargetGroupInput {
+  name: string;
+  port: number;
+}
+
+export interface ListenerRules {
+  subdomainPrefix?: string;
+}
+
+export enum PORTS {
+  SSH = 443,
+  TCP = 80,
+}
+
+export type CombinedFargateResource = TargetGroupInput &
+  ListenerRules & {
+    imageName: string;
+    cpuSize: number;
+    memorySize: number;
+    desiredCount: number;
+    environment?: pulumi.Input<pulumi.Input<awsx.types.input.ecs.TaskDefinitionKeyValuePairArgs>[]>;
+  };
