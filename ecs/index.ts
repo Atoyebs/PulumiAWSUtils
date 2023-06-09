@@ -48,13 +48,11 @@ export class ECSFargateCluster {
       {}
     );
 
-    const loadBalancerArn = this.applicationLoadBalancer.loadBalancer.arn;
-
     let combinedResources: CombinedResourcesMap = {};
 
     const httpsListener = ECSFargateCluster.setupHttpsListener(
       `https-listener-${stage}`,
-      loadBalancerArn,
+      this.applicationLoadBalancer,
       this.certificate.arn
     );
 
@@ -112,25 +110,29 @@ export class ECSFargateCluster {
    */
   static setupHttpsListener(
     listenerName: string,
-    loadBalancerArn: string | pulumi.Input<string>,
+    loadBalancer: awsx.lb.ApplicationLoadBalancer,
     certificateArn: string | pulumi.Input<string>
   ): aws.lb.Listener {
-    return new aws.lb.Listener(listenerName, {
-      loadBalancerArn: loadBalancerArn,
-      port: PORTS.SSH,
-      protocol: "HTTPS",
-      certificateArn: certificateArn,
-      defaultActions: [
-        {
-          type: "fixed-response",
-          fixedResponse: {
-            contentType: "text/plain",
-            messageBody: "Fixed response content",
-            statusCode: "200",
+    return new aws.lb.Listener(
+      listenerName,
+      {
+        loadBalancerArn: loadBalancer.loadBalancer.arn,
+        port: PORTS.SSH,
+        protocol: "HTTPS",
+        certificateArn: certificateArn,
+        defaultActions: [
+          {
+            type: "fixed-response",
+            fixedResponse: {
+              contentType: "text/plain",
+              messageBody: "Fixed response content",
+              statusCode: "200",
+            },
           },
-        },
-      ],
-    });
+        ],
+      },
+      { dependsOn: [loadBalancer] }
+    );
   }
 
   /**
