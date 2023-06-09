@@ -42,6 +42,9 @@ export class ECSFargateCluster {
 
     const vpc = new awsx.ec2.DefaultVpc(`${props.resourceNamingPrefix}-${stage}-vpc`);
 
+    // An ECS cluster to deploy into
+    this.cluster = new aws.ecs.Cluster(props.clusterName, {}, { dependsOn: [vpc] });
+
     // Create an application load balancer with SSL support.
     this.applicationLoadBalancer = new awsx.lb.ApplicationLoadBalancer(
       `${props.resourceNamingPrefix}-${stage}-lb`,
@@ -58,28 +61,35 @@ export class ECSFargateCluster {
 
     //store all target groups in a map for easy access via its name
     props.combinedResources.forEach(({ name, port }) => {
-      const containerTargetGroup = new aws.lb.TargetGroup(`${name}-${stage}-tg`, {
-        port,
-        protocol: "HTTP",
-        targetType: "ip",
-        vpcId: vpc.vpcId,
-      });
+      const containerTargetGroup = new aws.lb.TargetGroup(
+        `${name}-${stage}-tg`,
+        {
+          port,
+          protocol: "HTTP",
+          targetType: "ip",
+          vpcId: vpc.vpcId,
+        },
+        { dependsOn: [httpsListener, this.applicationLoadBalancer, this.cluster] }
+      );
 
       combinedResources[name] = {
         targetGroup: containerTargetGroup,
         internalPort: port,
-        listenerRule: new aws.lb.ListenerRule(`${name}-${stage}-rule`, {
-          actions: [{ type: "forward", targetGroupArn: containerTargetGroup.arn }],
-          conditions: [{ hostHeader: { values: [`${name}-${stage}.${props.certificateDomain}`] } }],
-          listenerArn: httpsListener.arn,
-        }),
+        listenerRule: new aws.lb.ListenerRule(
+          `${name}-${stage}-rule`,
+          {
+            actions: [{ type: "forward", targetGroupArn: containerTargetGroup.arn }],
+            conditions: [
+              { hostHeader: { values: [`${name}-${stage}.${props.certificateDomain}`] } },
+            ],
+            listenerArn: httpsListener.arn,
+          },
+          { dependsOn: [httpsListener, containerTargetGroup, this.cluster] }
+        ),
       };
     });
 
     this.combinedResources = combinedResources;
-
-    // An ECS cluster to deploy into
-    this.cluster = new aws.ecs.Cluster(props.clusterName, {}, { dependsOn: [vpc] });
   }
 
   /**
@@ -146,7 +156,7 @@ export class ECSFargateCluster {
   setupHttpsListener(listenerName: string): aws.lb.Listener {
     return ECSFargateCluster.setupHttpsListener(
       listenerName,
-      this.applicationLoadBalancer.loadBalancer.arn,
+      this.applicationLoadBalancer,
       this.certificate.arn
     );
   }
